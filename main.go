@@ -14,8 +14,8 @@ import (
 var indexServer = "http://index.commoncrawl.org/"
 var crawlStorage = "https://commoncrawl.s3.amazonaws.com/"
 
-// indexAPI ... API Response structure from `index.commoncrawl.org`
-type indexAPI struct {
+// IndexAPI ... API Response structure from `index.commoncrawl.org`
+type IndexAPI struct {
 	Urlkey       string `json:"urlkey,omitempty"`
 	Timestamp    string `json:"timestamp,omitempty"`
 	Charset      string `json:"charset,omitempty"`
@@ -30,11 +30,11 @@ type indexAPI struct {
 	Filename     string `json:"filename,omitempty"`
 }
 
-// GetIndex ... Makes request to commoncrawl index API to gather all offsets that contain pointed URL
+// GetPagesInfo ... Makes request to commoncrawl index API to gather all offsets that contain pointed URL
 //   crawl: Crawl a database which should be used, e.g 'CC-MAIN-2019-22';
 //   url: URL of a site, offsets and other info of which should be returned.
 // Returns a list of JSON objects with information about each file offset and other data.
-func GetIndex(crawl string, url string) ([]indexAPI, error) {
+func GetPagesInfo(crawl string, url string) ([]IndexAPI, error) {
 	// Build request
 	client := http.Client{Timeout: 30 * time.Second}
 	req, _ := http.NewRequest("GET", indexServer+crawl+"-index", nil)
@@ -57,9 +57,9 @@ func GetIndex(crawl string, url string) ([]indexAPI, error) {
 
 	// Parse the response that contains JSON objects seperated with new line
 	rawPages := strings.Split(string(body), "\n")
-	pages := []indexAPI{}
+	pages := []IndexAPI{}
 	for _, p := range rawPages {
-		val := &indexAPI{}
+		val := &IndexAPI{}
 		err := json.NewDecoder(strings.NewReader(p)).Decode(&val)
 		if err != nil {
 			fmt.Println(err)
@@ -71,9 +71,9 @@ func GetIndex(crawl string, url string) ([]indexAPI, error) {
 }
 
 // SaveContent ... Saves pages or text that were found in Common Crawl to choosen folder
-//   pages: info about found web pages from `getIndex function`
+//   pages: info about found web pages from `getIndex` function
 //   saveTo: destination fodler, where save fetched web data
-func SaveContent(pages []indexAPI, saveTo string) error {
+func SaveContent(pages []IndexAPI, saveTo string) error {
 	client := http.Client{Timeout: 30 * time.Second}
 
 	for i, page := range pages {
@@ -120,7 +120,7 @@ func ChangeIndexServer(server string) {
 }
 
 func main() {
-	pages, err := GetIndex("CC-MAIN-2019-22", "example.com/")
+	pages, err := GetPagesInfo("CC-MAIN-2019-22", "example.com/")
 	if err != nil {
 		fmt.Println(err)
 	}
