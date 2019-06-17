@@ -7,11 +7,11 @@ import (
 	"strings"
 )
 
-func extensionByContent(content []byte) string {
+// ExtensionByContent ... Returns extension of file by detecting its MIME type, `.none` returned if no MIME found
+func ExtensionByContent(content []byte) string {
 	contentType := http.DetectContentType([]byte(content))
 	splitted := strings.Split(contentType, "; ")[0]
-	extenstions := map[string]string{"text/xml": ".xml", "text/html": ".html",
-		"text/plain": ".txt"}
+	extenstions := map[string]string{"text/xml": ".xml", "text/html": ".html", "image/jpeg": ".jpeg", "application/pdf": ".pdf", "text/plain": ".txt"}
 	if extenstions[splitted] == "" {
 		log.Println("[extensionByContent] No extension for " + splitted)
 		return ".none"
@@ -19,7 +19,8 @@ func extensionByContent(content []byte) string {
 	return extenstions[splitted]
 }
 
-func escapeURL(url string) string {
+// EscapeURL ... Makes possible to create files with URL name by replacing system chars with %<char code>
+func EscapeURL(url string) string {
 	badChars := []string{"/", "\\", ":", "?"}
 	escapedURL := ""
 
