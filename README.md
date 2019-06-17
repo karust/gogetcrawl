@@ -22,7 +22,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-    // Parse retrieved information about pages and save it in `./data`
+    // Parse retrieved pages information and save it in `./data`
 	cc.SaveContent(pages, "./data")
 }
 ```

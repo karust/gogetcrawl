@@ -101,11 +101,11 @@ func SaveContent(pages []IndexAPI, saveTo string) error {
 		//header := splitted[1]
 		response := splitted[2]
 
-		ext := extensionByContent([]byte(response))
+		ext := ExtensionByContent([]byte(response))
 
 		startURL := strings.Index(warc, "WARC-Target-URI:") + 17
 		endURL := strings.Index(warc, "\r\nWARC-Payload-Digest")
-		url := escapeURL(warc[startURL:endURL])
+		url := EscapeURL(warc[startURL:endURL])
 
 		// Write extracted HTML and show progess
 		ioutil.WriteFile(saveTo+"/"+url+ext, []byte(response), 0644)
