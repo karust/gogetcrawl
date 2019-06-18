@@ -1,5 +1,5 @@
 # goCommonCrawl
-Helps to extract web data (mostly HTML pages) from Common Crawl Web archive using their index API server.
+**goCommonCrawl** extracts web data from [Common Crawl](http://commoncrawl.org) Web archive, that is located on Amazon S3 storage, using their [index API server](http://index.commoncrawl.org/).
 
 ## Installation
 ```
@@ -28,14 +28,16 @@ func main() {
 }
 ```
 
-Another way, with goroutines:
+Concurrent way to do things:
 ```go
 func main() {
 	// Create channel for results
 	resChann := make(chan cc.Result)
+
+	// Some URLs to fetch pages from
 	sites := []string{"medium.com/", "example.com/", "tutorialspoint.com/"}
 
-	// Start goroutine for each URL
+	// Make save folder and start goroutine for each URL
 	for _, url := range sites {
 		saveFolder := "./data/" + cc.EscapeURL(url)
 		go cc.FetchURLData(url, saveFolder, resChann, 30, "")
@@ -51,3 +53,4 @@ func main() {
 	}
 }
 ```
+In the result, you should get folders with files (mostly HTML and robot.txt) that belong to given URLs. 
