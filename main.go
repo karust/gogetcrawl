@@ -33,10 +33,14 @@ type IndexAPI struct {
 // GetPagesInfo ... Makes request to commoncrawl index API to gather all offsets that contain pointed URL
 //   crawl: Crawl a database which should be used, e.g 'CC-MAIN-2019-22';
 //   url: URL of a site, offsets and other info of which should be returned.
+//   timeout: timeout in seconds, default 30
 // Returns a list of JSON objects with information about each file offset and other data.
-func GetPagesInfo(crawl string, url string) ([]IndexAPI, error) {
+func GetPagesInfo(crawl string, url string, timeout int) ([]IndexAPI, error) {
+	if timeout == 0 {
+		timeout = 30
+	}
 	// Build request
-	client := http.Client{Timeout: 30 * time.Second}
+	client := http.Client{Timeout: time.Duration(timeout) * time.Second}
 	req, _ := http.NewRequest("GET", indexServer+crawl+"-index", nil)
 
 	// Add request params and do it
@@ -62,7 +66,7 @@ func GetPagesInfo(crawl string, url string) ([]IndexAPI, error) {
 		val := &IndexAPI{}
 		err := json.NewDecoder(strings.NewReader(p)).Decode(&val)
 		if err != nil {
-			fmt.Println(err)
+			//fmt.Errorf("getIndex JSON decode error: %v", err)
 			continue
 		}
 		pages = append(pages, *val)
@@ -73,8 +77,12 @@ func GetPagesInfo(crawl string, url string) ([]IndexAPI, error) {
 // SaveContent ... Saves pages or text that were found in Common Crawl to choosen folder
 //   pages: info about found web pages from `getIndex` function
 //   saveTo: destination fodler, where save fetched web data
-func SaveContent(pages []IndexAPI, saveTo string) error {
-	client := http.Client{Timeout: 30 * time.Second}
+//   timeout: timeout in seconds, default 30
+func SaveContent(pages []IndexAPI, saveTo string, timeout int) error {
+	if timeout == 0 {
+		timeout = 30
+	}
+	client := http.Client{Timeout: time.Duration(timeout) * time.Second}
 
 	for i, page := range pages {
 		offset, _ := strconv.Atoi(page.Offset)
@@ -89,10 +97,6 @@ func SaveContent(pages []IndexAPI, saveTo string) error {
 			return fmt.Errorf("saveContent response read error: %v", err)
 		}
 
-		// Read response
-		if err != nil {
-			return fmt.Errorf("saveContent response read error: %v", err)
-		}
 		// Deflate response and split the WARC, HEADER, HTML from it
 		reader, _ := gzip.NewReader(resp.Body)
 		b, err := ioutil.ReadAll(reader)
@@ -108,7 +112,10 @@ func SaveContent(pages []IndexAPI, saveTo string) error {
 		url := EscapeURL(warc[startURL:endURL])
 
 		// Write extracted HTML and show progess
-		ioutil.WriteFile(saveTo+"/"+url+ext, []byte(response), 0644)
+		err = ioutil.WriteFile(saveTo+"/"+url+ext, []byte(response), 0644)
+		if err != nil {
+			return fmt.Errorf("saveContent writing file error: %v", err)
+		}
 		fmt.Printf("Page %v/%v\n", i+1, len(pages))
 	}
 	return nil
@@ -120,10 +127,13 @@ func ChangeIndexServer(server string) {
 }
 
 func main() {
-	pages, err := GetPagesInfo("CC-MAIN-2019-22", "example.com/")
+	pages, err := GetPagesInfo("CC-MAIN-2019-22", "example.com/", 45)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	SaveContent(pages, "./data")
+	SaveContent(pages, "./data", 45)
+	if err != nil {
+		fmt.Println(err)
+	}
 }
