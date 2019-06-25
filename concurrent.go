@@ -17,9 +17,16 @@ type Result struct {
 	Progress int
 	Total    int
 	Error    error
+	Done     bool
 }
 
-func saveContent(pages []IndexAPI, saveTo string, res chan Result, timeout int) {
+func saveContent(pages []IndexAPI, saveTo string, res chan Result, timeout int, waitMS int) {
+	defer func() {
+		if r := recover(); r != nil {
+			res <- Result{Error: fmt.Errorf("saveContent recover: %v", r)}
+		}
+	}()
+
 	if timeout == 0 {
 		timeout = 30
 	}
@@ -35,13 +42,24 @@ func saveContent(pages []IndexAPI, saveTo string, res chan Result, timeout int) 
 
 		resp, err := client.Do(req)
 		if err != nil {
-			res <- Result{Error: fmt.Errorf("saveContent response read error: %v", err)}
+			res <- Result{Error: fmt.Errorf("saveContent request error: %v", err)}
 			return
 		}
 
 		// Deflate response and split the WARC, HEADER, HTML from it
-		reader, _ := gzip.NewReader(resp.Body)
+		reader, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			res <- Result{Error: fmt.Errorf("saveContent error deflating response: %v", err)}
+			//continue
+		}
+		if reader == nil {
+			continue
+		}
 		b, err := ioutil.ReadAll(reader)
+		if err != nil {
+			res <- Result{Error: fmt.Errorf("saveContent error deflating response: %v", err)}
+			//continue
+		}
 		splitted := strings.Split(string(b), "\r\n\r\n")
 		warc := splitted[0]
 		response := splitted[2]
@@ -50,6 +68,7 @@ func saveContent(pages []IndexAPI, saveTo string, res chan Result, timeout int) 
 
 		startURL := strings.Index(warc, "WARC-Target-URI:") + 17
 		endURL := strings.Index(warc, "\r\nWARC-Payload-Digest")
+
 		url := warc[startURL:endURL]
 		urlEsc := EscapeURL(url)
 
@@ -57,21 +76,23 @@ func saveContent(pages []IndexAPI, saveTo string, res chan Result, timeout int) 
 		err = ioutil.WriteFile(saveTo+"/"+urlEsc+ext, []byte(response), 0644)
 		if err != nil {
 			res <- Result{Error: fmt.Errorf("saveContent writing file error: %v", err)}
-			return
+			continue
 		}
 		res <- Result{URL: url, Progress: i + 1, Total: len(pages)}
+		time.Sleep(time.Millisecond * time.Duration(waitMS))
 	}
 }
 
 // FetchURLData ... Fetches pages located on the given URL from Common Crawl archive using Index API and saves them to the pointed location
 // Set `crawlDB` argument empty if not sure what it is
-func FetchURLData(url string, saveto string, res chan Result, timeout int, crawlDB string) {
+func FetchURLData(url string, saveto string, res chan Result, timeout int, crawlDB string, waitMS int) {
 	if crawlDB == "" {
 		crawlDB = "CC-MAIN-2019-22"
 	}
 	if timeout == 0 {
 		timeout = 30
 	}
+
 	// Create directory if not exists
 	if _, err := os.Stat(saveto); os.IsNotExist(err) {
 		err := os.Mkdir(saveto, os.ModeDir)
@@ -81,13 +102,15 @@ func FetchURLData(url string, saveto string, res chan Result, timeout int, crawl
 		}
 	}
 
+	urlSite := "*." + url // KOSTYL
 	// Get info about URL from Index server
-	pages, err := GetPagesInfo(crawlDB, url, timeout)
+	pages, err := GetPagesInfo(crawlDB, urlSite, timeout)
 	if err != nil {
 		res <- Result{Error: err}
 		return
 	}
 
 	// Retrieve found pages from Amazon S3 storage and save them
-	saveContent(pages, saveto, res, timeout)
+	saveContent(pages, saveto, res, timeout, waitMS)
+	res <- Result{Done: true, URL: url}
 }

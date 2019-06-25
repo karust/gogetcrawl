@@ -3,7 +3,7 @@
 
 ## Installation
 ```
-go get github.com/karust/goCommonCrawl
+go get -u github.com/karust/goCommonCrawl
 ```
 
 ## Usage

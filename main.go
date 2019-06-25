@@ -79,6 +79,7 @@ func GetPagesInfo(crawl string, url string, timeout int) ([]IndexAPI, error) {
 //   saveTo: destination fodler, where save fetched web data
 //   timeout: timeout in seconds, default 30
 func SaveContent(pages []IndexAPI, saveTo string, timeout int) error {
+	fmt.Println(pages)
 	if timeout == 0 {
 		timeout = 30
 	}
@@ -94,12 +95,18 @@ func SaveContent(pages []IndexAPI, saveTo string, timeout int) error {
 
 		resp, err := client.Do(req)
 		if err != nil {
-			return fmt.Errorf("saveContent response read error: %v", err)
+			return fmt.Errorf("saveContent request error: %v", err)
 		}
 
 		// Deflate response and split the WARC, HEADER, HTML from it
-		reader, _ := gzip.NewReader(resp.Body)
+		reader, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			//return fmt.Errorf("saveContent error deflating response: %v", err)
+		}
 		b, err := ioutil.ReadAll(reader)
+		if err != nil {
+			//return fmt.Errorf("saveContent error deflating response: %v", err)
+		}
 		splitted := strings.Split(string(b), "\r\n\r\n")
 		warc := splitted[0]
 		//header := splitted[1]
