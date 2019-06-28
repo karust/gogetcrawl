@@ -42,6 +42,7 @@ func GetPagesInfo(crawl string, url string, timeout int) ([]IndexAPI, error) {
 	// Build request
 	client := http.Client{Timeout: time.Duration(timeout) * time.Second}
 	req, _ := http.NewRequest("GET", indexServer+crawl+"-index", nil)
+	req.Header.Set("User-Agent", randomOption(userAgents))
 
 	// Add request params and do it
 	q := req.URL.Query()
@@ -92,6 +93,7 @@ func SaveContent(pages []IndexAPI, saveTo string, timeout int) error {
 
 		req, _ := http.NewRequest("GET", crawlStorage+page.Filename, nil)
 		req.Header.Set("Range", fmt.Sprintf("bytes=%v-%v", offset, offsetEnd))
+		req.Header.Set("User-Agent", randomOption(userAgents))
 
 		resp, err := client.Do(req)
 		if err != nil {

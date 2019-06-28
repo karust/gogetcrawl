@@ -21,11 +21,11 @@ type Result struct {
 }
 
 func saveContent(pages []IndexAPI, saveTo string, res chan Result, timeout int, waitMS int) {
-	defer func() {
-		if r := recover(); r != nil {
-			res <- Result{Error: fmt.Errorf("saveContent recover: %v", r)}
-		}
-	}()
+	// defer func() {
+	// 	if r := recover(); r != nil {
+	// 		res <- Result{Error: fmt.Errorf("saveContent recover: %v", r)}
+	// 	}
+	// }()
 
 	if timeout == 0 {
 		timeout = 30
@@ -39,25 +39,29 @@ func saveContent(pages []IndexAPI, saveTo string, res chan Result, timeout int, 
 
 		req, _ := http.NewRequest("GET", crawlStorage+page.Filename, nil)
 		req.Header.Set("Range", fmt.Sprintf("bytes=%v-%v", offset, offsetEnd))
+		req.Header.Set("User-Agent", randomOption(userAgents))
 
 		resp, err := client.Do(req)
 		if err != nil {
 			res <- Result{Error: fmt.Errorf("saveContent request error: %v", err)}
 			return
 		}
+		defer resp.Body.Close()
 
-		// Deflate response and split the WARC, HEADER, HTML from it
+		//Deflate response and split the WARC, HEADER, HTML from it
 		reader, err := gzip.NewReader(resp.Body)
 		if err != nil {
-			res <- Result{Error: fmt.Errorf("saveContent error deflating response: %v", err)}
+			res <- Result{Error: fmt.Errorf("saveContent error deflating response 1: %v", err)}
 			//continue
 		}
 		if reader == nil {
 			continue
 		}
+		defer reader.Close()
+
 		b, err := ioutil.ReadAll(reader)
 		if err != nil {
-			res <- Result{Error: fmt.Errorf("saveContent error deflating response: %v", err)}
+			res <- Result{Error: fmt.Errorf("saveContent error deflating response 2: %v", err)}
 			//continue
 		}
 		splitted := strings.Split(string(b), "\r\n\r\n")
