@@ -21,11 +21,11 @@ type Result struct {
 }
 
 func saveContent(pages []IndexAPI, saveTo string, res chan Result, timeout int, waitMS int) {
-	// defer func() {
-	// 	if r := recover(); r != nil {
-	// 		res <- Result{Error: fmt.Errorf("saveContent recover: %v", r)}
-	// 	}
-	// }()
+	defer func() {
+		if r := recover(); r != nil {
+			res <- Result{Error: fmt.Errorf("saveContent recover: %v", r)}
+		}
+	}()
 
 	if timeout == 0 {
 		timeout = 30
