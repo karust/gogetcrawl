@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -20,19 +21,33 @@ type Result struct {
 	Done     bool
 }
 
-func saveContent(pages []IndexAPI, saveTo string, res chan Result, timeout int, waitMS int) {
+// Config ... Holds configurations of crawler
+type Config struct {
+	ResultChan chan Result
+	Timeout    int
+	CrawlDB    string
+	WaitMS     int
+	Extensions []string
+	MaxAmount  int
+	//RandomizeName bool
+	//HashFilter    bool
+}
+
+func saveContent(pages []IndexAPI, saveTo string, timeout int, config Config) {
 	defer func() {
 		if r := recover(); r != nil {
-			res <- Result{Error: fmt.Errorf("saveContent recover: %v", r)}
+			config.ResultChan <- Result{Error: fmt.Errorf("saveContent recover: %v", r)}
 		}
 	}()
 
-	if timeout == 0 {
-		timeout = 30
-	}
+	downloaded := 0
 	client := http.Client{Timeout: time.Duration(timeout) * time.Second}
 
 	for i, page := range pages {
+		if downloaded >= config.MaxAmount {
+			return
+		}
+
 		offset, _ := strconv.Atoi(page.Offset)
 		length, _ := strconv.Atoi(page.Length)
 		offsetEnd := offset + length + 1
@@ -43,7 +58,7 @@ func saveContent(pages []IndexAPI, saveTo string, res chan Result, timeout int, 
 
 		resp, err := client.Do(req)
 		if err != nil {
-			res <- Result{Error: fmt.Errorf("saveContent request error: %v", err)}
+			config.ResultChan <- Result{Error: fmt.Errorf("saveContent request error: %v", err)}
 			return
 		}
 		defer resp.Body.Close()
@@ -51,7 +66,7 @@ func saveContent(pages []IndexAPI, saveTo string, res chan Result, timeout int, 
 		//Deflate response and split the WARC, HEADER, HTML from it
 		reader, err := gzip.NewReader(resp.Body)
 		if err != nil {
-			res <- Result{Error: fmt.Errorf("saveContent error deflating response 1: %v", err)}
+			config.ResultChan <- Result{Error: fmt.Errorf("saveContent error deflating response 1: %v", err)}
 			//continue
 		}
 		if reader == nil {
@@ -61,60 +76,71 @@ func saveContent(pages []IndexAPI, saveTo string, res chan Result, timeout int, 
 
 		b, err := ioutil.ReadAll(reader)
 		if err != nil {
-			res <- Result{Error: fmt.Errorf("saveContent error deflating response 2: %v", err)}
+			config.ResultChan <- Result{Error: fmt.Errorf("saveContent error deflating response 2: %v", err)}
 			//continue
 		}
+		//fmt.Println(string(b))
 		splitted := strings.Split(string(b), "\r\n\r\n")
 		warc := splitted[0]
 		response := splitted[2]
 
+		// Return if extension of file is not in allowed
 		ext := ExtensionByContent([]byte(response))
+		if !IsExtensionExist(config.Extensions, ext) {
+			continue
+		}
 
 		startURL := strings.Index(warc, "WARC-Target-URI:") + 17
 		endURL := strings.Index(warc, "\r\nWARC-Payload-Digest")
 
-		url := warc[startURL:endURL]
-		urlEsc := EscapeURL(url)
+		link := warc[startURL:endURL]
+		linkEscaped := EscapeURL(link)
 
-		// Write extracted HTML and show progess
-		err = ioutil.WriteFile(saveTo+"/"+urlEsc+ext, []byte(response), 0644)
+		// Save extracted file and write progess to channel
+		err = ioutil.WriteFile(saveTo+"/"+linkEscaped+ext, []byte(response), 0644)
 		if err != nil {
-			res <- Result{Error: fmt.Errorf("saveContent writing file error: %v", err)}
+			config.ResultChan <- Result{Error: fmt.Errorf("saveContent writing file error: %v", err)}
 			continue
 		}
-		res <- Result{URL: url, Progress: i + 1, Total: len(pages)}
-		time.Sleep(time.Millisecond * time.Duration(waitMS))
+		config.ResultChan <- Result{URL: link, Progress: i + 1, Total: len(pages)}
+		time.Sleep(time.Millisecond * time.Duration(config.WaitMS))
+		downloaded++
 	}
 }
 
 // FetchURLData ... Fetches pages located on the given URL from Common Crawl archive using Index API and saves them to the pointed location
 // Set `crawlDB` argument empty if not sure what it is
-func FetchURLData(url string, saveto string, res chan Result, timeout int, crawlDB string, waitMS int) {
-	if crawlDB == "" {
-		crawlDB = "CC-MAIN-2019-22"
+func FetchURLData(url string, saveto string, config Config) {
+	crawlDB, timeout := "CC-MAIN-2019-22", 30
+	if config.ResultChan == nil {
+		log.Fatalln("[FetchURLData] No Result channel provided")
 	}
-	if timeout == 0 {
-		timeout = 30
+	if config.Timeout != 0 {
+		timeout = config.Timeout
+	}
+	if config.CrawlDB != "" {
+		crawlDB = config.CrawlDB
 	}
 
 	// Create directory if not exists
 	if _, err := os.Stat(saveto); os.IsNotExist(err) {
 		err := os.Mkdir(saveto, os.ModeDir)
 		if err != nil {
-			res <- Result{Error: err}
+			config.ResultChan <- Result{Error: err}
 			return
 		}
 	}
 
-	urlSite := "*." + url // KOSTYL
+	urlSite := "*." + url // Clutch :(
+
 	// Get info about URL from Index server
 	pages, err := GetPagesInfo(crawlDB, urlSite, timeout)
 	if err != nil {
-		res <- Result{Error: err}
+		config.ResultChan <- Result{Error: err}
 		return
 	}
 
 	// Retrieve found pages from Amazon S3 storage and save them
-	saveContent(pages, saveto, res, timeout, waitMS)
-	res <- Result{Done: true, URL: url}
+	saveContent(pages, saveto, timeout, config)
+	config.ResultChan <- Result{Done: true, URL: url}
 }
