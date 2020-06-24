@@ -39,6 +39,7 @@ func GetPagesInfo(crawl string, url string, timeout int) ([]IndexAPI, error) {
 	if timeout == 0 {
 		timeout = 30
 	}
+
 	// Build request
 	client := http.Client{Timeout: time.Duration(timeout) * time.Second}
 	req, _ := http.NewRequest("GET", indexServer+crawl+"-index", nil)
@@ -51,18 +52,19 @@ func GetPagesInfo(crawl string, url string, timeout int) ([]IndexAPI, error) {
 	req.URL.RawQuery = q.Encode()
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("getIndex response read error: %v", err)
+		return nil, fmt.Errorf("[GetPagesInfo] response read error: %v", err)
 	}
 
 	// Read response
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("getIndex response read error: %v", err)
+		return nil, fmt.Errorf("[GetPagesInfo] response read error: %v", err)
 	}
 
 	// Parse the response that contains JSON objects seperated with new line
 	rawPages := strings.Split(string(body), "\n")
 	pages := []IndexAPI{}
+
 	for _, p := range rawPages {
 		val := &IndexAPI{}
 		err := json.NewDecoder(strings.NewReader(p)).Decode(&val)
@@ -80,10 +82,10 @@ func GetPagesInfo(crawl string, url string, timeout int) ([]IndexAPI, error) {
 //   saveTo: destination fodler, where save fetched web data
 //   timeout: timeout in seconds, default 30
 func SaveContent(pages []IndexAPI, saveTo string, timeout int) error {
-	fmt.Println(pages)
 	if timeout == 0 {
 		timeout = 30
 	}
+
 	client := http.Client{Timeout: time.Duration(timeout) * time.Second}
 
 	for i, page := range pages {
@@ -109,6 +111,7 @@ func SaveContent(pages []IndexAPI, saveTo string, timeout int) error {
 		if err != nil {
 			//return fmt.Errorf("saveContent error deflating response: %v", err)
 		}
+
 		splitted := strings.Split(string(b), "\r\n\r\n")
 		warc := splitted[0]
 		//header := splitted[1]

@@ -66,7 +66,7 @@ func saveContent(pages []IndexAPI, saveTo string, timeout int, config Config) {
 		//Deflate response and split the WARC, HEADER, HTML from it
 		reader, err := gzip.NewReader(resp.Body)
 		if err != nil {
-			config.ResultChan <- Result{Error: fmt.Errorf("saveContent error deflating response 1: %v", err)}
+			config.ResultChan <- Result{Error: fmt.Errorf("saveContent error deflating response: %v", err)}
 			//continue
 		}
 		if reader == nil {
@@ -75,11 +75,11 @@ func saveContent(pages []IndexAPI, saveTo string, timeout int, config Config) {
 		defer reader.Close()
 
 		b, err := ioutil.ReadAll(reader)
-		if err != nil {
-			config.ResultChan <- Result{Error: fmt.Errorf("saveContent error deflating response 2: %v", err)}
-			//continue
+		if err != nil && len(b) == 0 {
+			//config.ResultChan <- Result{Error: fmt.Errorf("saveContent error deflating response 2: %v", err)}
+			continue
 		}
-		//fmt.Println(string(b))
+
 		splitted := strings.Split(string(b), "\r\n\r\n")
 		warc := splitted[0]
 		response := splitted[2]
@@ -131,7 +131,7 @@ func FetchURLData(url string, saveto string, config Config) {
 		}
 	}
 
-	urlSite := "*." + url // Clutch :(
+	urlSite := "*." + url
 
 	// Get info about URL from Index server
 	pages, err := GetPagesInfo(crawlDB, urlSite, timeout)
