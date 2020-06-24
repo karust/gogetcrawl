@@ -1,6 +1,9 @@
 # goCommonCrawl
 **goCommonCrawl** extracts web data from [Common Crawl](http://commoncrawl.org) Web archive, that is located on Amazon S3 storage, using their [index API server](http://index.commoncrawl.org/).
 
+## Release
+Compiled version available at https://github.com/karust/goCommonCrawl/releases/tag/1
+
 ## Installation
 ```
 go get -u github.com/karust/goCommonCrawl
