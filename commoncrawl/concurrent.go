@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/karust/goCommonCrawl/common"
 )
 
 // Result ... of `FetchURLData` function execution
@@ -52,7 +54,7 @@ func saveContent(pages []IndexAPI, saveTo string, timeout int, config Config) {
 		length, _ := strconv.Atoi(page.Length)
 		offsetEnd := offset + length + 1
 
-		req, _ := http.NewRequest("GET", crawlStorage+page.Filename, nil)
+		req, _ := http.NewRequest("GET", CRAWL_STORAGE+page.Filename, nil)
 		req.Header.Set("Range", fmt.Sprintf("bytes=%v-%v", offset, offsetEnd))
 		req.Header.Set("User-Agent", randomOption(userAgents))
 
@@ -85,8 +87,8 @@ func saveContent(pages []IndexAPI, saveTo string, timeout int, config Config) {
 		response := splitted[2]
 
 		// Return if extension of file is not in allowed
-		ext := ExtensionByContent([]byte(response))
-		if !IsExtensionExist(config.Extensions, ext) {
+		ext := common.ExtensionByContent([]byte(response))
+		if !common.IsExtensionExist(config.Extensions, ext) {
 			continue
 		}
 
@@ -94,7 +96,7 @@ func saveContent(pages []IndexAPI, saveTo string, timeout int, config Config) {
 		endURL := strings.Index(warc, "\r\nWARC-Payload-Digest")
 
 		link := warc[startURL:endURL]
-		linkEscaped := EscapeURL(link)
+		linkEscaped := common.EscapeURL(link)
 
 		// Save extracted file and write progess to channel
 		err = ioutil.WriteFile(saveTo+"/"+linkEscaped+ext, []byte(response), 0644)
@@ -134,13 +136,13 @@ func FetchURLData(url string, saveto string, config Config) {
 	urlSite := "*." + url
 
 	// Get info about URL from Index server
-	pages, err := GetPagesInfo(crawlDB, urlSite, timeout)
+	pages, err := GetPages(crawlDB, urlSite, timeout)
 	if err != nil {
 		config.ResultChan <- Result{Error: err}
 		return
 	}
 
 	// Retrieve found pages from Amazon S3 storage and save them
-	saveContent(pages, saveto, timeout, config)
+	saveContent(*pages, saveto, timeout, config)
 	config.ResultChan <- Result{Done: true, URL: url}
 }
