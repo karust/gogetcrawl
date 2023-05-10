@@ -15,6 +15,11 @@ const RESPONSE = `[["urlkey","timestamp","original","mimetype","statuscode","dig
 ["ru,kamaloff)/login?next=/", "20180104100356", "https://kamaloff.ru/login/?next=/", "text/html", "200", "7AK62UMEB5LCDYN5JSLXZ7ZZG5Z7XNCQ", "1998"],
 ["ru,kamaloff)/robots.txt", "20130801111119", "http://kamaloff.ru/robots.txt", "text/html", "404", "6443ZIMC2V4HX7MZ4YUEY2VI3OEI36HM", "351"]]`
 
+func init() {
+	STD_TIMEOUT = 15
+	STD_RETRIES = 2
+}
+
 func TestParseResponse(t *testing.T) {
 	want := "http://kamaloff.ru/"
 

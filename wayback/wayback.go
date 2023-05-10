@@ -9,8 +9,10 @@ import (
 )
 
 const INDEX_SERVER = "https://web.archive.org/cdx/search/cdx"
-
 const CRAWL_STORAGE = "https://web.archive.org/web"
+
+var STD_TIMEOUT = 30
+var STD_RETRIES = 3
 
 // WebArchive API Response structure
 type IndexAPI struct {
@@ -129,7 +131,7 @@ func ParseResponse(resp []byte) ([]*IndexAPI, error) {
 func GetNumPages(url string) (int, error) {
 
 	requestURI := fmt.Sprintf("%v?url=%v&showNumPages=true", INDEX_SERVER, url)
-	response, err := common.Get(requestURI, 15, 5)
+	response, err := common.Get(requestURI, STD_TIMEOUT, STD_RETRIES)
 	if err != nil {
 		return 0, fmt.Errorf("[GetNumPages] Request error: %v", err)
 	}
@@ -148,7 +150,7 @@ func GetNumPages(url string) (int, error) {
 func GetFile(url, timestamp string) ([]byte, error) {
 
 	requestURI := fmt.Sprintf("%v/%vid_/%v", CRAWL_STORAGE, timestamp, url)
-	response, err := common.Get(requestURI, 15, 5)
+	response, err := common.Get(requestURI, STD_TIMEOUT, STD_RETRIES)
 	if err != nil {
 		return nil, fmt.Errorf("[GetNumPages] Request error: %v", err)
 	}

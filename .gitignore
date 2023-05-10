@@ -1,3 +1,4 @@
 data/*
 *.exe
 .vs
+_release
