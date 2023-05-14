@@ -1,5 +1,5 @@
-# goCommonCrawl
-**goCommonCrawl** extracts web data from [Common Crawl](http://commoncrawl.org) Web archive, that is located on Amazon S3 storage, using their [index API server](http://index.commoncrawl.org/).
+# Go Get Crawl
+**goGetCrawl** extracts web data from [Common Crawl](http://commoncrawl.org) Web archive, that is located on Amazon S3 storage, using their [index API server](http://index.commoncrawl.org/).
 
 ## Release
 Compiled version available at https://github.com/karust/goCommonCrawl/releases/tag/1
@@ -16,7 +16,7 @@ package main
 
 import (
 	"log"
-	cc "github.com/karust/gocommoncrawl"
+	cc "github.com/karust/gogetcrawl"
 )
 
 func main() {
@@ -71,3 +71,10 @@ func main() {
 }
 ```
 In the result, you should get folders with files (mostly HTML and robot.txt) that belong to given URLs. 
+
+* Run in Docker
+```
+docker build -t gogetcrawl .
+docker run gogetcrawl --help
+```
+

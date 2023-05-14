@@ -17,32 +17,60 @@ import (
 var Status503Error = errors.New("Server returned 503 status response")
 var Status500Error = errors.New("Server returned 500 status response. (Slow down)")
 
+//  WebArchive and Common Crawl (index.commoncrawl.org) CDX API Response structure from
+type CdxResponse struct {
+	Urlkey       string `json:"urlkey,omitempty"`
+	Timestamp    string `json:"timestamp,omitempty"`
+	Charset      string `json:"charset,omitempty"`
+	MimeType     string `json:"mime,omitempty"`
+	Languages    string `json:"languages,omitempty"`
+	MimeDetected string `json:"mimedetected,omitempty"`
+	Digest       string `json:"digest,omitempty"`
+	Offset       string `json:"offset,omitempty"`
+	Original     string `json:"url,omitempty"` // Original URL
+	Length       string `json:"length,omitempty"`
+	StatusCode   string `json:"status,omitempty"`
+	Filename     string `json:"filename,omitempty"`
+}
+
+// Source of web archive data
+type Source interface {
+	Name() string
+	ParseResponse(resp []byte) ([]*CdxResponse, error)
+	GetNumPages(url string) (int, error)
+	GetPages(config RequestConfig) ([]*CdxResponse, error)
+	FetchPages(config RequestConfig, results chan []*CdxResponse, errors chan error)
+	GetFile(*CdxResponse) ([]byte, error)
+}
+
 type RequestConfig struct {
 	URL        string   // Url to parse
 	Filters    []string // Extenstion to search
-	Limit      int      // Max number of results
-	Collapse   bool     // Collapse results by similar URLkeys
-	Timeout    int      // Request timeout
-	MaxRetries int      // Max number of request retries if timeouted
-	SinglePage bool
+	Limit      uint     // Max number of results per page
+	Collapse   string   // Which column to use to collapse results
+	SinglePage bool     // Get results only from 1st page (mostly used for tests)
 }
 
-// GetUrlFromConfig ... Compose URI with request parameters for Index server
-func GetUrlFromConfig(serverURL string, config RequestConfig) string {
+// GetUrlFromConfig ... Compose URL with CDX server request parameters
+func GetUrlFromConfig(serverURL string, config RequestConfig, page int) string {
 	reqURL := fmt.Sprintf("%v?url=%v&output=json", serverURL, config.URL)
 
 	if config.Limit != 0 {
 		reqURL = fmt.Sprintf("%v&limit=%v", reqURL, config.Limit)
 	}
 
-	if config.Collapse {
-		reqURL = fmt.Sprintf("%v&collapse=urlkey", reqURL)
+	if config.Collapse != "" {
+		reqURL = fmt.Sprintf("%v&collapse=%v", reqURL, config.Collapse)
 	}
 
 	for _, filter := range config.Filters {
 		if filter != "" {
 			reqURL = fmt.Sprintf("%v&filter=%v", reqURL, filter)
 		}
+	}
+
+	if !config.SinglePage {
+		reqURL = fmt.Sprintf("%v&page=%v", reqURL, page)
 	}
 
 	return reqURL
@@ -75,8 +103,9 @@ func DoRequest(url string, timeout int, headers map[string]string) ([]byte, erro
 		return nil, Status500Error
 	case 503:
 		return resp.Body(), Status503Error
-	// File from CommonCrawl storage
-	case 206:
+	}
+
+	if len(resp.Body()) > 0 {
 		return resp.Body(), nil
 	}
 
@@ -97,7 +126,7 @@ func Get(url string, timeout int, maxRetries int) ([]byte, error) {
 	var responseBytes []byte
 
 	for i := maxRetries; i != 0; i-- {
-		log.Println("Get: ", timeout, maxRetries, url)
+		log.Printf("GET [t=%v] [r=%v]: %v", timeout, maxRetries, url)
 
 		responseBytes, err = DoRequest(url, timeout, nil)
 		if err == nil {
@@ -107,7 +136,6 @@ func Get(url string, timeout int, maxRetries int) ([]byte, error) {
 		if err == Status503Error || err == Status500Error {
 			time.Sleep(time.Duration(timeout * int(time.Second)))
 		}
-
 	}
 
 	return nil, fmt.Errorf("Perfomed max retries, no result: %v", err)

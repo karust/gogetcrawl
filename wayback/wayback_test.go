@@ -4,10 +4,9 @@ import (
 	"testing"
 	"time"
 
-	common "github.com/karust/goCommonCrawl/common"
+	common "github.com/karust/goGetCrawl/common"
 )
 
-// Use pre-saved responses, actual ones may take time
 // Example request: https://web.archive.org/cdx/search/cdx?url=kamaloff.ru/*&output=json&limit=100&collapse=urlkey
 const RESPONSE = `[["urlkey","timestamp","original","mimetype","statuscode","digest","length"],
 ["ru,kamaloff)/", "20130522121421", "http://kamaloff.ru/", "text/html", "200", "FXOQP7LM7FWUC7S5MTDHZS2WMKNLCW2E", "2558"],
@@ -15,15 +14,17 @@ const RESPONSE = `[["urlkey","timestamp","original","mimetype","statuscode","dig
 ["ru,kamaloff)/login?next=/", "20180104100356", "https://kamaloff.ru/login/?next=/", "text/html", "200", "7AK62UMEB5LCDYN5JSLXZ7ZZG5Z7XNCQ", "1998"],
 ["ru,kamaloff)/robots.txt", "20130801111119", "http://kamaloff.ru/robots.txt", "text/html", "404", "6443ZIMC2V4HX7MZ4YUEY2VI3OEI36HM", "351"]]`
 
+// Test interface
+var wb common.Source = &Wayback{}
+
 func init() {
-	STD_TIMEOUT = 15
-	STD_RETRIES = 2
+	wb, _ = New(15, 2)
 }
 
 func TestParseResponse(t *testing.T) {
 	want := "http://kamaloff.ru/"
 
-	parsedResp, err := ParseResponse([]byte(RESPONSE))
+	parsedResp, err := wb.ParseResponse([]byte(RESPONSE))
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -37,7 +38,7 @@ func TestParseResponse(t *testing.T) {
 func TestGetNumPages(t *testing.T) {
 	want := 1
 
-	parsedResp, err := GetNumPages("kamaloff.ru")
+	parsedResp, err := wb.GetNumPages("kamaloff.ru")
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -50,20 +51,21 @@ func TestGetNumPages(t *testing.T) {
 
 func TestGetPages(t *testing.T) {
 	config := common.RequestConfig{
-		URL:        "kamaloff.ru/*",
-		Filters:    []string{"statuscode:200", "mimetype:text/html"},
-		Limit:      100,
-		Collapse:   true,
-		Timeout:    30,
-		MaxRetries: 2,
+		URL:     "*.kamaloff.ru/*",
+		Filters: []string{"statuscode:200"},
+		Limit:   10,
 	}
-	results, err := GetPages(config)
+	results, err := wb.GetPages(config)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	if len(results) == 0 {
 		t.Fatalf("No pages fetched from Web Archive")
+	}
+
+	if len(results) != 10 {
+		t.Fatalf("Incorrect number of pages returned: %v, want=10", len(results))
 	}
 }
 
@@ -73,8 +75,6 @@ func TestFetchPages(t *testing.T) {
 		Filters:    []string{"statuscode:200", "mimetype:text/html"},
 		Limit:      6,
 		SinglePage: true,
-		Timeout:    5,
-		MaxRetries: 2,
 	}
 
 	config2 := common.RequestConfig{
@@ -82,22 +82,20 @@ func TestFetchPages(t *testing.T) {
 		Filters:    []string{"statuscode:200", "mimetype:text/html"},
 		Limit:      6,
 		SinglePage: true,
-		Timeout:    5,
-		MaxRetries: 1,
 	}
 
-	resultsChan := make(chan []*IndexAPI)
+	resultsChan := make(chan []*common.CdxResponse)
 	errorsChan := make(chan error)
 
 	go func() {
-		FetchPages(config1, resultsChan, errorsChan)
+		wb.FetchPages(config1, resultsChan, errorsChan)
 	}()
 
 	go func() {
-		FetchPages(config2, resultsChan, errorsChan)
+		wb.FetchPages(config2, resultsChan, errorsChan)
 	}()
 
-	var results []*IndexAPI
+	var results []*common.CdxResponse
 	timeout := false
 
 	for {
@@ -131,22 +129,22 @@ func TestFetchPages(t *testing.T) {
 
 func TestGetFile(t *testing.T) {
 	config := common.RequestConfig{
-		URL:        "kamaloff.ru/*",
-		Filters:    []string{"statuscode:200", "mimetype:text/html"},
-		Limit:      5,
-		Collapse:   true,
-		Timeout:    10,
-		MaxRetries: 2,
+		URL:     "kamaloff.ru/*",
+		Filters: []string{"statuscode:200", "mimetype:text/html"},
+		Limit:   5,
 	}
-	results, err := GetPages(config)
+	results, err := wb.GetPages(config)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
-	file, err := GetFile(results[0].Original, results[0].Timestamp)
+	file, err := wb.GetFile(results[0])
 	if err != nil {
 		t.Fatalf("Cannot get file: %v", err)
 	}
 
 	t.Logf("Obtained file length: %v", len(file))
+	if len(file) != 11011 {
+		t.Fatalf("Got incorrect length file")
+	}
 }

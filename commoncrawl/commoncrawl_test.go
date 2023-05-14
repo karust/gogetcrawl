@@ -1,11 +1,10 @@
 package commoncrawl
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
-	common "github.com/karust/goCommonCrawl/common"
+	common "github.com/karust/goGetCrawl/common"
 )
 
 // ! Currently impossinble to run tests all at once, due to the index server timeouts
@@ -20,13 +19,16 @@ const RESPONSE = `{"urlkey": "com,tutorialspoint)/accounting_basics/accounting_b
 {"urlkey": "com,tutorialspoint)/adding_and_subtracting_decimals/pdf/addition_with_money_worksheet8_2.pdf", "timestamp": "20230330112743", "url": "https://www.tutorialspoint.com/adding_and_subtracting_decimals/pdf/addition_with_money_worksheet8_2.pdf", "mime": "application/pdf", "mime-detected": "application/pdf", "status": "200", "digest": "ZYCDOJ2JTPPWFTCNYEIXCWKEJQXTA7UD", "length": "226957", "offset": "1167440233", "filename": "crawl-data/CC-MAIN-2023-14/segments/1679296949181.44/warc/CC-MAIN-20230330101355-20230330131355-00035.warc.gz"}
 `
 
+// Test interface
+var cctest common.Source = &CommonCrawl{}
+var cc *CommonCrawl
+
 func init() {
-	STD_TIMEOUT = 15
-	STD_RETRIES = 2
+	cc, _ = New(15, 2)
 }
 
-func TestGetIndexIDs(t *testing.T) {
-	index_ids, err := GetIndexIDs()
+func TestGetIndexes(t *testing.T) {
+	index_ids, err := cc.GetIndexes()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,25 +52,23 @@ func TestGetIndexIDs(t *testing.T) {
 // }
 
 func TestGetNumPages(t *testing.T) {
-	want := 1
-
-	got, err := GetNumPages("*.wikipedia.org/")
+	got, err := cc.GetNumPages("*.wikipedia.org/")
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
-	if got != want {
-		t.Fatalf("Parsed result doesn't contain wanted value: Want=%v, Got=%v", want, got)
+	if got == 0 {
+		t.Fatalf("Parsed result doesn't contain wanted value: Got=%v", got)
 	}
 }
 
 func TestParseResponse(t *testing.T) {
 	want := "http://www.tutorialspoint.com/accounting_basics/accounting_basics_tutorial.pdf"
-	parsedResp, err := ParseResponse([]byte(RESPONSE))
+	parsedResp, err := cc.ParseResponse([]byte(RESPONSE))
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
-	got := parsedResp[0].URL
+	got := parsedResp[0].Original
 	if got != want {
 		t.Fatalf("parsed result doesn't contain wanted value: Want=%v, Got=%v", want, got)
 	}
@@ -97,18 +97,14 @@ func TestParseResponse(t *testing.T) {
 
 func TestGetPages(t *testing.T) {
 	config := common.RequestConfig{
-		URL: "wikipedia.org/",
-		//Filters:    []string{"statuscode:200", "mimetype:text/html"},
-		Limit: 10,
-		//Collapse:   true,
-		Timeout:    55,
-		MaxRetries: 2,
+		URL:     "wikipedia.org/",
+		Filters: []string{"statuscode:200", "mimetype:text/html"},
+		Limit:   10,
 	}
-	results, err := GetPages(config)
+	results, err := cc.GetPages(config)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
-	fmt.Println(results)
 
 	if len(results) == 0 {
 		t.Fatalf("No pages fetched from Web Archive")
@@ -121,8 +117,6 @@ func TestFetchPages(t *testing.T) {
 		Filters:    []string{"statuscode:200", "mimetype:text/html"},
 		Limit:      6,
 		SinglePage: true,
-		Timeout:    20,
-		MaxRetries: 2,
 	}
 
 	config2 := common.RequestConfig{
@@ -130,27 +124,20 @@ func TestFetchPages(t *testing.T) {
 		Filters:    []string{"statuscode:200", "mimetype:text/html"},
 		Limit:      6,
 		SinglePage: true,
-		Timeout:    20,
-		MaxRetries: 2,
 	}
 
-	resultsChan := make(chan []*IndexAPI)
+	resultsChan := make(chan []*common.CdxResponse)
 	errorsChan := make(chan error)
 
-	index_ids, err := GetIndexIDs()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	go func() {
-		FetchPages(config1, index_ids[0].Id, resultsChan, errorsChan)
+		cc.FetchPages(config1, resultsChan, errorsChan)
 	}()
 
 	go func() {
-		FetchPages(config2, index_ids[0].Id, resultsChan, errorsChan)
+		cc.FetchPages(config2, resultsChan, errorsChan)
 	}()
 
-	var results []*IndexAPI
+	var results []*common.CdxResponse
 	timeout := false
 
 	for {
@@ -180,12 +167,12 @@ func TestFetchPages(t *testing.T) {
 }
 
 func TestGetFile(t *testing.T) {
-	pages, err := ParseResponse([]byte(RESPONSE))
+	pages, err := cc.ParseResponse([]byte(RESPONSE))
 	if err != nil {
 		t.Fatalf("Cannot parse response: %v", err)
 	}
 
-	file, err := GetFile(pages[4], STD_TIMEOUT)
+	file, err := cc.GetFile(pages[4])
 	if err != nil {
 		t.Fatalf("Cannot get file: %v", err)
 	}
