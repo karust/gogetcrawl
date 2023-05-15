@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const version = "0.1"
+const version = "0.2"
 
 var (
 	filters          []string
@@ -120,6 +120,6 @@ func init() {
 	rootCmd.PersistentFlags().StringSliceVarP(&extensions, "ext", "e", []string{}, `Which extensions to collect. Example: --ext "pdf,doc,jpeg"`)
 	rootCmd.PersistentFlags().StringSliceVarP(&sourceNames, "sources", "s", []string{"wb", "cc"}, `Web archive sources to use. Example: --sources "wb" to use only the Wayback`)
 	rootCmd.PersistentFlags().BoolVarP(&isDefaultFilters, "default-filter", "", false, `Use default filters (statuscode:200", "mimetype:text/html).`)
-	rootCmd.PersistentFlags().BoolVarP(&isVerbose, "verbose", "v", false, `Use default filters (statuscode:200", "mimetype:text/html).`)
-	rootCmd.PersistentFlags().BoolVarP(&isLogging, "log", "", false, `Use default filters (statuscode:200", "mimetype:text/html).`)
+	rootCmd.PersistentFlags().BoolVarP(&isVerbose, "verbose", "v", false, `Use verbose output.`)
+	rootCmd.PersistentFlags().BoolVarP(&isLogging, "log", "", false, `Print logs to ./logs.txt.`)
 }
