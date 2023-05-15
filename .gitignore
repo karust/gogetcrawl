@@ -1,3 +1,5 @@
 data/*
 *.exe
 .vs
+.release
+logs.txt

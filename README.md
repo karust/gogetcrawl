@@ -1,73 +1,148 @@
-# goCommonCrawl
-**goCommonCrawl** extracts web data from [Common Crawl](http://commoncrawl.org) Web archive, that is located on Amazon S3 storage, using their [index API server](http://index.commoncrawl.org/).
-
-## Release
-Compiled version available at https://github.com/karust/goCommonCrawl/releases/tag/1
+# Go Get Crawl
+**goGetCrawl** is a tool and library which help you download URLs and Files from popular Web Archives like [Common Crawl](http://commoncrawl.org) and [Wayback Machine](https://web.archive.org/). You can use it as a command line tool or import the solution into your Go project. 
 
 ## Installation
+### Source
 ```
-go get -u github.com/karust/goCommonCrawl
+go install github.com/karust/goGetCrawl
 ```
 
+### Docker
+```
+docker build -t gogetcrawl .
+docker run gogetcrawl --help
+```
+
+### Binary
+Check out the latest release if you need binary [here](https://github.com/karust/goGetCrawl/releases).
+
+
 ## Usage
-If you need to fetch some URL without concurrency:
+### Cmd usage
+* See commands and flags:
+```
+gogetcrawl -h
+```
+
+* Get URLs:
+
+You can fetch multiple domains archive data, the flags will be applied to each. By default you'll get all results displayed in your terminal.
+```
+gogetcrawl url *.example.com kamaloff.ru 
+```
+
+To limit number of results, output to file and select only Wayback as source you can:
+```
+gogetcrawl url *.example.com kamaloff.ru --limit 10 --sources wb -o ./urls.txt
+```
+
+* Download files:
+To download 10 `PDF` files to `./test` directory with 3 workers:
+```
+gogetcrawl download *.cia.gov/* --limit 10 -w 3 -d ./test -f "mimetype:application/pdf"
+```
+
+### Library usage
+For both Wayback and Common crawl you can use `concurrent` and `non-concurrent` ways to interract with archives: 
+#### Wayback
+* Get urls
 ```go
 package main
 
 import (
-	"log"
-	cc "github.com/karust/gocommoncrawl"
+	"fmt"
+
+	"github.com/karust/goGetCrawl/common"
+	"github.com/karust/goGetCrawl/wayback"
 )
 
 func main() {
-    // Get information about `example.com/` URL from  `CC-MAIN-2019-22` archive
-	pages, err := cc.GetPagesInfo("CC-MAIN-2019-22", "example.com/", 45)
-	if err != nil {
-		log.Fatalln(err)
+	// Get only 10 status:200 pages
+	config := common.RequestConfig{
+		URL:     "*.example.com/*",
+		Filters: []string{"statuscode:200"},
+		Limit:   10,
 	}
 
-    // Parse retrieved pages information and save it in `./data`
-	cc.SaveContent(pages, "./data", 45)
+	// Set requests timout and retries
+	wb, _ := wayback.New(15, 2)
+
+	// Use config to obtain all CDX server responses
+	results, _ := wb.GetPages(config)
+
+	for _, r := range results {
+		fmt.Println(r.Urlkey, r.Original, r.MimeType)
+	}
 }
 ```
 
-Concurrent way to do things:
+* Get files
 ```go
-func main() {
-	// Create channel for results
-	resChan := make(chan cc.Result)
+// Get all status:200 HTML files 
+config := common.RequestConfig{
+	URL:     "*.tutorialspoint.com/*",
+	Filters: []string{"statuscode:200", "mimetype:text/html"},
+}
 
-	// Some URLs to fetch pages from
-	sites := []string{"medium.com/", "example.com/", "tutorialspoint.com/"}
+wb, _ := wayback.New(15, 2)
+results, _ := wb.GetPages(config)
 
-	// Make save folder and start goroutine for each URL
-	for _, url := range sites {
-		// Configure request
-		commonConfig := cc.Config{
-			ResultChan: resChan,
-			Timeout:    30,
-			// Version of archive
-			CrawlDB: "CC-MAIN-2019-22",
-			// Wait time between AWS S3 downloads in milliseconds
-			WaitMS: 53,
-			// Extensions to save
-			Extensions: []string{".html", ".pdf", ".doc", ".txt"},
-			// Max amount of files to save
-			MaxAmount: 20,
-		}
+// Get first file from CDX response
+file, err := wb.GetFile(results[0])
 
-		saveFolder := "./data/" + cc.EscapeURL(url)
-		go cc.FetchURLData(url, saveFolder, commonConfig)
-	}
+fmt.Println(string(file))
+```
 
-	// Listen for results from goroutines
-	for r := range resChan {
-		if r.Error != nil {
-			fmt.Printf("Error occured: %v\n", r.Error)
-		} else if r.Progress > 0 {
-			fmt.Printf("Progress %v: %v/%v\n", r.URL, r.Progress, r.Total)
+#### Common Crawl
+To use Common crawl you just need to replace `wayback` module with `commoncrawl`. Let's use Common Crawl concurretly:
+
+* Get urls
+```go
+cc, _ := commoncrawl.New(30, 3)
+
+config1 := common.RequestConfig{
+	URL:        "*.tutorialspoint.com/*",
+	Filters:    []string{"statuscode:200", "mimetype:text/html"},
+	Limit:      6,
+}
+
+config2 := common.RequestConfig{
+	URL:        "example.com/*",
+	Filters:    []string{"statuscode:200", "mimetype:text/html"},
+	Limit:      6,
+}
+
+resultsChan := make(chan []*common.CdxResponse)
+errorsChan := make(chan error)
+
+go func() {
+	cc.FetchPages(config1, resultsChan, errorsChan)
+}()
+
+go func() {
+	cc.FetchPages(config2, resultsChan, errorsChan)
+}()
+
+for {
+	select {
+	case err := <-errorsChan:
+		fmt.Printf("FetchPages goroutine failed: %v", err)
+	case res, ok := <-resultsChan:
+		if ok {
+			fmt.Println(res)
 		}
 	}
 }
 ```
-In the result, you should get folders with files (mostly HTML and robot.txt) that belong to given URLs. 
+
+* Get files
+```go
+config := common.RequestConfig{
+	URL:     "kamaloff.ru/*",
+	Filters: []string{"statuscode:200", "mimetype:text/html"},
+}
+
+cc, _ := commoncrawl.New(15, 2)
+results, _ := wb.GetPages(config)
+file, err := cc.GetFile(results[0])
+```
