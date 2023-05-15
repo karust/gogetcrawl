@@ -1,10 +1,7 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
-	"mime"
-	"net/url"
 	"os"
 	"path/filepath"
 	"sync"
@@ -17,7 +14,7 @@ import (
 type fileScenario struct {
 	finishedWorkers uint
 	outputDir       string
-	downloadRate    uint
+	downloadRate    float32
 }
 
 var fileScn = fileScenario{}
@@ -26,29 +23,29 @@ var fileCMD = &cobra.Command{
 	Use:     "file",
 	Aliases: []string{"download"},
 	Short:   "Download files located in web arhives for desired domains",
+	Args:    cobra.MatchAll(cobra.MinimumNArgs(1), cobra.OnlyValidArgs),
 	Run:     fileScn.spawnWorkers,
 }
 
-func (fs *fileScenario) worker(configs chan common.RequestConfig) {
+func (fs *fileScenario) worker(configs <-chan common.RequestConfig) {
 	for {
 		select {
 		case config, ok := <-configs:
 			if ok {
 				var wg sync.WaitGroup
 				for _, s := range sources {
+
 					wg.Add(1)
 					go func(s common.Source) {
 						defer wg.Done()
-						pages, err := s.GetPages(config)
-						if err != nil {
-							errors <- err
-							return
-						}
-						for _, p := range pages {
-							fs.saveFile(s, p)
-							time.Sleep(time.Second * time.Duration(fs.downloadRate))
-						}
+						s.FetchPages(config, results, errors)
 					}(s)
+
+					//wg.Add(1)
+					go func() {
+						//defer wg.Done()
+						common.SaveFiles(results, fs.outputDir, errors, fs.downloadRate)
+					}()
 				}
 				wg.Wait()
 			} else {
@@ -60,13 +57,16 @@ func (fs *fileScenario) worker(configs chan common.RequestConfig) {
 }
 
 func (fs *fileScenario) spawnWorkers(cmd *cobra.Command, args []string) {
-	err := os.MkdirAll(fs.outputDir, os.ModePerm)
+	fp, _ := filepath.Abs(fs.outputDir)
+	err := os.MkdirAll(fp, os.ModePerm)
 	if err != nil {
 		log.Fatalf("Cannot get access to '%v' dir: %v", fileScn.outputDir, err)
+	} else {
+		log.Printf("Setting '%v' as output directorty", fp)
 	}
 
-	initSources()
 	configs := getRequestConfigs(args)
+	initSources()
 
 	var wg sync.WaitGroup
 
@@ -101,31 +101,9 @@ func (fs *fileScenario) spawnWorkers(cmd *cobra.Command, args []string) {
 	close(results)
 }
 
-func (fs *fileScenario) saveFile(source common.Source, page *common.CdxResponse) {
-	file, err := source.GetFile(page)
-	if err != nil {
-		errors <- err
-		return
-	}
-
-	exts, _ := mime.ExtensionsByType(page.MimeType)
-	if exts == nil {
-		exts = []string{""}
-	}
-
-	filename := fmt.Sprintf("%v-%v-%v%v", page.Original, page.Timestamp, source.Name(), exts[0])
-	escapedFilename := url.QueryEscape(filename)
-	fullPath := filepath.Join(fs.outputDir, escapedFilename)
-
-	err = common.SaveFile(file, fullPath)
-	if err != nil {
-		errors <- err
-	}
-}
-
 func init() {
 	fileCMD.Flags().StringVarP(&fileScn.outputDir, "dir", "d", "", "Path to the output directory")
-	fileCMD.Flags().UintVarP(&fileScn.downloadRate, "rate", "", 5, "Download rate in seconds for each worker (thread)")
+	fileCMD.Flags().Float32VarP(&fileScn.downloadRate, "rate", "", 1.0, "Download rate in seconds for each worker (thread). Ex: 5, 1.5")
 	rootCmd.AddCommand(fileCMD)
 	fileCMD.MarkFlagRequired("dir")
 }

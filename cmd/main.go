@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime"
 	"os"
 
 	"github.com/karust/goGetCrawl/common"
@@ -12,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const version = "0.2"
+const version = "1.1.0"
 
 var (
 	filters          []string
@@ -61,6 +62,10 @@ func initSources() {
 			sources = append(sources, wb)
 		}
 	}
+
+	if len(sources) == 0 {
+		log.Fatalf("No archive sources provided.")
+	}
 }
 
 // Prepare arvhive request configs
@@ -69,6 +74,14 @@ func getRequestConfigs(args []string) chan common.RequestConfig {
 
 	if isDefaultFilters {
 		filters = append(filters, []string{"statuscode:200", "mimetype:text/html"}...)
+	}
+
+	for _, ext := range extensions {
+		mtype := mime.TypeByExtension("." + ext)
+		if mtype == "" {
+			log.Fatalln(fmt.Sprintf("No MIME type found for '%v', please use '--filter' with correlated MIME.", ext))
+		}
+		filters = append(filters, "mimetype:"+mtype)
 	}
 
 	for _, domain := range args {
@@ -116,8 +129,8 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&maxTimeout, "timeout", "t", 30, `Max timeout of requests.`)
 	rootCmd.PersistentFlags().IntVarP(&maxRetries, "retries", "r", 3, `Max request retries."`)
 	rootCmd.PersistentFlags().UintVarP(&maxResults, "limit", "l", 0, `Max number of results to fetch."`)
-	rootCmd.PersistentFlags().UintVarP(&maxWorkers, "workers", "w", 4, `Max number of workers (threads) to use."`)
-	rootCmd.PersistentFlags().StringSliceVarP(&extensions, "ext", "e", []string{}, `Which extensions to collect. Example: --ext "pdf,doc,jpeg"`)
+	rootCmd.PersistentFlags().UintVarP(&maxWorkers, "workers", "w", 4, `Max number of workers (threads) to use. URL consumes 1 worker"`)
+	rootCmd.PersistentFlags().StringSliceVarP(&extensions, "ext", "e", []string{}, `Which extensions to collect. Example: --ext "pdf,xml,jpeg"`)
 	rootCmd.PersistentFlags().StringSliceVarP(&sourceNames, "sources", "s", []string{"wb", "cc"}, `Web archive sources to use. Example: --sources "wb" to use only the Wayback`)
 	rootCmd.PersistentFlags().BoolVarP(&isDefaultFilters, "default-filter", "", false, `Use default filters (statuscode:200", "mimetype:text/html).`)
 	rootCmd.PersistentFlags().BoolVarP(&isVerbose, "verbose", "v", false, `Use verbose output.`)

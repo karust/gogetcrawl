@@ -6,7 +6,9 @@ import (
 	"log"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -31,6 +33,7 @@ type CdxResponse struct {
 	Length       string `json:"length,omitempty"`
 	StatusCode   string `json:"status,omitempty"`
 	Filename     string `json:"filename,omitempty"`
+	Source       Source
 }
 
 // Source of web archive data
@@ -141,6 +144,7 @@ func Get(url string, timeout int, maxRetries int) ([]byte, error) {
 	return nil, fmt.Errorf("Perfomed max retries, no result: %v", err)
 }
 
+// Save data using file fullpath
 func SaveFile(data []byte, path string) error {
 	err := os.WriteFile(path, data, 0644)
 	if err != nil {
@@ -148,6 +152,43 @@ func SaveFile(data []byte, path string) error {
 	}
 
 	return nil
+}
+
+// Save files from CDX Response channel into output directory
+func SaveFiles(results <-chan []*CdxResponse, outputDir string, errors chan error, downloadRate float32) {
+	log.Println("[SaveFiles] worker started:", outputDir)
+
+	for {
+		select {
+		case resBatch, ok := <-results:
+			if ok {
+				for _, res := range resBatch {
+					data, err := res.Source.GetFile(res)
+					if err != nil {
+						errors <- err
+						continue
+					}
+
+					exts, _ := mime.ExtensionsByType(res.MimeType)
+					if exts == nil {
+						exts = []string{""}
+					}
+
+					filename := fmt.Sprintf("%v-%v-%v%v", res.Original, res.Timestamp, res.Source.Name(), exts[0])
+					escapedFilename := url.QueryEscape(filename)
+					fullPath := filepath.Join(outputDir, escapedFilename)
+
+					err = SaveFile(data, fullPath)
+					if err != nil {
+						errors <- err
+					}
+
+					time.Sleep(time.Second * time.Duration(downloadRate))
+				}
+			}
+		}
+	}
+
 }
 
 func GetFileExtenstion(file *[]byte) (string, error) {

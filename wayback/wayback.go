@@ -26,10 +26,10 @@ func (Wayback) Name() string {
 }
 
 // Return the number of pages located in WebArchive for given url
-func (as *Wayback) GetNumPages(url string) (int, error) {
+func (wb *Wayback) GetNumPages(url string) (int, error) {
 
 	requestURI := fmt.Sprintf("%v?url=%v&showNumPages=true", INDEX_SERVER, url)
-	response, err := common.Get(requestURI, as.MaxTimeout, as.MaxRetries)
+	response, err := common.Get(requestURI, wb.MaxTimeout, wb.MaxRetries)
 	if err != nil {
 		return 0, fmt.Errorf("[GetNumPages] Request error: %v", err)
 	}
@@ -45,7 +45,7 @@ func (as *Wayback) GetNumPages(url string) (int, error) {
 }
 
 // Parse response from https://web.archive.org/cdx/search/cdx CDX server
-func (as *Wayback) ParseResponse(resp []byte) ([]*common.CdxResponse, error) {
+func (wb *Wayback) ParseResponse(resp []byte) ([]*common.CdxResponse, error) {
 	var results [][]string
 
 	err := jsoniter.Unmarshal(resp, &results)
@@ -70,6 +70,7 @@ func (as *Wayback) ParseResponse(resp []byte) ([]*common.CdxResponse, error) {
 			Length:     entry[6],
 		}
 
+		parsed.Source = wb
 		parsedResults = append(parsedResults, &parsed)
 	}
 
@@ -77,14 +78,14 @@ func (as *Wayback) ParseResponse(resp []byte) ([]*common.CdxResponse, error) {
 }
 
 // GetPages ... Makes request to WebArchive CDX API to gather all url observations
-func (as *Wayback) GetPages(config common.RequestConfig) ([]*common.CdxResponse, error) {
+func (wb *Wayback) GetPages(config common.RequestConfig) ([]*common.CdxResponse, error) {
 	var pages int
 	var err error
 
 	if config.SinglePage {
 		pages = 1
 	} else {
-		pages, err = as.GetNumPages(config.URL)
+		pages, err = wb.GetNumPages(config.URL)
 		if err != nil {
 			return nil, err
 		}
@@ -96,12 +97,12 @@ func (as *Wayback) GetPages(config common.RequestConfig) ([]*common.CdxResponse,
 	for page := 0; page < pages; page++ {
 		reqURL := common.GetUrlFromConfig(INDEX_SERVER, config, page)
 
-		response, err := common.Get(reqURL, as.MaxTimeout, as.MaxRetries)
+		response, err := common.Get(reqURL, wb.MaxTimeout, wb.MaxRetries)
 		if err != nil {
 			return results, fmt.Errorf("[GetPages] Request error: %v", err)
 		}
 
-		parsedResponse, err := as.ParseResponse(response)
+		parsedResponse, err := wb.ParseResponse(response)
 		if err != nil {
 			return results, fmt.Errorf("[GetPages] Cannot parse response: %v", err)
 		}
@@ -118,14 +119,14 @@ func (as *Wayback) GetPages(config common.RequestConfig) ([]*common.CdxResponse,
 
 // FetchPages ... Concurrent way to GetPages.
 // Makes request to WebArchive CDX API and return observations in a channel.
-func (as *Wayback) FetchPages(config common.RequestConfig, results chan []*common.CdxResponse, errors chan error) {
+func (wb *Wayback) FetchPages(config common.RequestConfig, results chan []*common.CdxResponse, errors chan error) {
 	var pages int
 	var err error
 
 	if config.SinglePage {
 		pages = 1
 	} else {
-		pages, err = as.GetNumPages(config.URL)
+		pages, err = wb.GetNumPages(config.URL)
 		if err != nil {
 			errors <- err
 		}
@@ -136,12 +137,12 @@ func (as *Wayback) FetchPages(config common.RequestConfig, results chan []*commo
 	for page := 0; page < pages; page++ {
 		reqURL := common.GetUrlFromConfig(INDEX_SERVER, config, page)
 
-		response, err := common.Get(reqURL, as.MaxTimeout, as.MaxRetries)
+		response, err := common.Get(reqURL, wb.MaxTimeout, wb.MaxRetries)
 		if err != nil {
 			errors <- fmt.Errorf("[FetchPages] Request error: %v", err)
 		}
 
-		parsedResponse, err := as.ParseResponse(response)
+		parsedResponse, err := wb.ParseResponse(response)
 		if err != nil {
 			errors <- fmt.Errorf("[FetchPages] Cannot parse response: %v", err)
 		}

@@ -1,10 +1,13 @@
 # Go Get Crawl
-**goGetCrawl** is a tool and library which help you download URLs and Files from popular Web Archives like [Common Crawl](http://commoncrawl.org) and [Wayback Machine](https://web.archive.org/). You can use it as a command line tool or import the solution into your Go project. 
+[![Go Report Card](https://goreportcard.com/badge/github.com/karust/goGetCrawl)](https://goreportcard.com/report/github.com/karust/goGetCrawl)
+[![Go Reference](https://pkg.go.dev/badge/github.com/karust/goGetCrawl.svg)](https://pkg.go.dev/github.com/karust/goGetCrawl)
+
+**GoGetCrawl** is a tool and package which help you download URLs and Files from popular Web Archives like [Common Crawl](http://commoncrawl.org) and [Wayback Machine](https://web.archive.org/). You can use it as a command line tool or import the solution into your Go project. 
 
 ## Installation
 ### Source
 ```
-go install github.com/karust/goGetCrawl
+go install github.com/karust/goGetCrawl@latest
 ```
 
 ### Docker
@@ -24,28 +27,31 @@ Check out the latest release if you need binary [here](https://github.com/karust
 gogetcrawl -h
 ```
 
-* Get URLs:
+#### Get URLs
 
-You can fetch multiple domains archive data, the flags will be applied to each. By default you'll get all results displayed in your terminal.
+* You can fetch multiple domains archive data, the flags will be applied to each. By default you'll get all results displayed in your terminal:
 ```
 gogetcrawl url *.example.com kamaloff.ru 
 ```
 
-To limit number of results, output to file and select only Wayback as source you can:
+* To limit number of results, output to file and select only Wayback as source you can:
 ```
 gogetcrawl url *.example.com kamaloff.ru --limit 10 --sources wb -o ./urls.txt
 ```
 
-* Download files:
-To download 10 `PDF` files to `./test` directory with 3 workers:
+#### Download files
+* To download 10 `PDF` files to `./test` directory with 3 workers:
 ```
 gogetcrawl download *.cia.gov/* --limit 10 -w 3 -d ./test -f "mimetype:application/pdf"
 ```
 
-### Library usage
-For both Wayback and Common crawl you can use `concurrent` and `non-concurrent` ways to interract with archives: 
+### Package usage
+```
+go get github.com/karust/goGetCrawl
+```
+*For both Wayback and Common crawl you can use `concurrent` and `non-concurrent` ways to interract with archives*
 #### Wayback
-* Get urls
+* **Get urls:**
 ```go
 package main
 
@@ -76,7 +82,7 @@ func main() {
 }
 ```
 
-* Get files
+* **Get files:**
 ```go
 // Get all status:200 HTML files 
 config := common.RequestConfig{
@@ -94,9 +100,9 @@ fmt.Println(string(file))
 ```
 
 #### Common Crawl
-To use Common crawl you just need to replace `wayback` module with `commoncrawl`. Let's use Common Crawl concurretly:
+*To use Common Crawl you just need to replace `wayback` module with `commoncrawl`. Let's use Common Crawl concurretly*
 
-* Get urls
+* **Get urls:**
 ```go
 cc, _ := commoncrawl.New(30, 3)
 
@@ -135,7 +141,7 @@ for {
 }
 ```
 
-* Get files
+* **Get files:**
 ```go
 config := common.RequestConfig{
 	URL:     "kamaloff.ru/*",
@@ -146,3 +152,6 @@ cc, _ := commoncrawl.New(15, 2)
 results, _ := wb.GetPages(config)
 file, err := cc.GetFile(results[0])
 ```
+
+## Bugs + Features
+If you have some issues/bugs or feature request, feel free to open an issue.

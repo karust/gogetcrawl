@@ -107,6 +107,7 @@ func (cc *CommonCrawl) ParseResponse(resp []byte) ([]*common.CdxResponse, error)
 		if err := jsoniter.Unmarshal(line, &indexVal); err != nil {
 			return nil, fmt.Errorf("[ParseResponse] Cannot decode JSON line: %v. Response: %v", err, string(line))
 		}
+		indexVal.Source = cc
 		pages = append(pages, &indexVal)
 	}
 

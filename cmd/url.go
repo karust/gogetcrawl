@@ -22,6 +22,7 @@ var urlCMD = &cobra.Command{
 	Use:     "url",
 	Aliases: []string{"collect"},
 	Short:   "Collect URLs from web archives for desired domain",
+	Args:    cobra.MatchAll(cobra.MinimumNArgs(1), cobra.OnlyValidArgs),
 	Run:     urlScn.spawnWorkers,
 }
 
@@ -54,8 +55,8 @@ func (us *urlScenario) spawnWorkers(cmd *cobra.Command, args []string) {
 		log.Fatalf("Error obtaining output: %v", err)
 	}
 
-	initSources()
 	configs := getRequestConfigs(args)
+	initSources()
 
 	var wg sync.WaitGroup
 
