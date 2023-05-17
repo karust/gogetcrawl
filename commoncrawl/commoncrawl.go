@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	jsoniter "github.com/json-iterator/go"
-	common "github.com/karust/goGetCrawl/common"
+	common "github.com/karust/gogetcrawl/common"
 	"github.com/slyrz/warc"
 )
 

@@ -1,4 +1,4 @@
-module github.com/karust/goGetCrawl
+module github.com/karust/gogetcrawl
 
 go 1.20
 

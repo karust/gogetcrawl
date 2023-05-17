@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/karust/goGetCrawl/cmd"
+	"github.com/karust/gogetcrawl/cmd"
 )
 
 func main() {

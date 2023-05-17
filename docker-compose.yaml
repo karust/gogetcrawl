@@ -1,0 +1,9 @@
+version: '1'
+
+services:
+  crawler1:
+      container_name: worker1
+      image: uranusq/gogetcrawl
+      command: file *.cia.gov/* --limit 1 --ext pdf --dir /app -v
+      volumes:
+        - ./test:/app

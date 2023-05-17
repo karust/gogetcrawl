@@ -1,13 +1,13 @@
 # Go Get Crawl
-[![Go Report Card](https://goreportcard.com/badge/github.com/karust/goGetCrawl)](https://goreportcard.com/report/github.com/karust/goGetCrawl)
-[![Go Reference](https://pkg.go.dev/badge/github.com/karust/goGetCrawl.svg)](https://pkg.go.dev/github.com/karust/goGetCrawl)
+[![Go Report Card](https://goreportcard.com/badge/github.com/karust/goGetCrawl)](https://goreportcard.com/report/github.com/karust/gogetcrawl)
+[![Go Reference](https://pkg.go.dev/badge/github.com/karust/gogetcrawl.svg)](https://pkg.go.dev/github.com/karust/gogetcrawl)
 
-**GoGetCrawl** is a tool and package which help you download URLs and Files from popular Web Archives like [Common Crawl](http://commoncrawl.org) and [Wayback Machine](https://web.archive.org/). You can use it as a command line tool or import the solution into your Go project. 
+**gogetcrawl** is a tool and package which help you download URLs and Files from popular Web Archives like [Common Crawl](http://commoncrawl.org) and [Wayback Machine](https://web.archive.org/). You can use it as a command line tool or import the solution into your Go project. 
 
 ## Installation
 ### Source
 ```
-go install github.com/karust/goGetCrawl@latest
+go install github.com/karust/gogetcrawl@latest
 ```
 
 ### Docker
@@ -17,10 +17,14 @@ docker run gogetcrawl --help
 ```
 
 ### Binary
-Check out the latest release if you need binary [here](https://github.com/karust/goGetCrawl/releases).
+Check out the latest release if you need binary [here](https://github.com/karust/gogetcrawl/releases).
 
 
 ## Usage
+### Docker
+```
+	docker run uranusq/gogetcrawl url *.tutorialspoint.com/* --ext pdf
+```
 ### Cmd usage
 * See commands and flags:
 ```
@@ -47,7 +51,7 @@ gogetcrawl download *.cia.gov/* --limit 10 -w 3 -d ./test -f "mimetype:applicati
 
 ### Package usage
 ```
-go get github.com/karust/goGetCrawl
+go get github.com/karust/gogetcrawl
 ```
 *For both Wayback and Common crawl you can use `concurrent` and `non-concurrent` ways to interract with archives*
 #### Wayback
@@ -58,8 +62,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/karust/goGetCrawl/common"
-	"github.com/karust/goGetCrawl/wayback"
+	"github.com/karust/gogetcrawl/common"
+	"github.com/karust/gogetcrawl/wayback"
 )
 
 func main() {

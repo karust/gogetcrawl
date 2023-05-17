@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/karust/goGetCrawl/common"
+	"github.com/karust/gogetcrawl/common"
 	"github.com/spf13/cobra"
 )
 

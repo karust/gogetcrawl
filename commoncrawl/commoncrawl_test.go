@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	common "github.com/karust/goGetCrawl/common"
+	common "github.com/karust/gogetcrawl/common"
 )
 
 // ! Currently impossinble to run tests all at once, due to the index server timeouts

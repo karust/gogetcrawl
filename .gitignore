@@ -3,3 +3,4 @@ data/*
 .vs
 .release
 logs.txt
+test/*

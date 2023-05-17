@@ -7,9 +7,9 @@ import (
 	"mime"
 	"os"
 
-	"github.com/karust/goGetCrawl/common"
-	"github.com/karust/goGetCrawl/commoncrawl"
-	"github.com/karust/goGetCrawl/wayback"
+	"github.com/karust/gogetcrawl/common"
+	"github.com/karust/gogetcrawl/commoncrawl"
+	"github.com/karust/gogetcrawl/wayback"
 	"github.com/spf13/cobra"
 )
 

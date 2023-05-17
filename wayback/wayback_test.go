@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	common "github.com/karust/goGetCrawl/common"
+	common "github.com/karust/gogetcrawl/common"
 )
 
 // Example request: https://web.archive.org/cdx/search/cdx?url=kamaloff.ru/*&output=json&limit=100&collapse=urlkey

@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/karust/goGetCrawl/common"
+	"github.com/karust/gogetcrawl/common"
 	"github.com/spf13/cobra"
 )
 

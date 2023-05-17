@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	jsoniter "github.com/json-iterator/go"
-	common "github.com/karust/goGetCrawl/common"
+	common "github.com/karust/gogetcrawl/common"
 )
 
 const INDEX_SERVER = "https://web.archive.org/cdx/search/cdx"
