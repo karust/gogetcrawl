@@ -2,7 +2,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/karust/goGetCrawl)](https://goreportcard.com/report/github.com/karust/gogetcrawl)
 [![Go Reference](https://pkg.go.dev/badge/github.com/karust/gogetcrawl.svg)](https://pkg.go.dev/github.com/karust/gogetcrawl)
 
-**gogetcrawl** is a tool and package which help you download URLs and Files from popular Web Archives like [Common Crawl](http://commoncrawl.org) and [Wayback Machine](https://web.archive.org/). You can use it as a command line tool or import the solution into your Go project. 
+**gogetcrawl** is a tool and package that helps you download URLs and Files from popular Web Archives like [Common Crawl](http://commoncrawl.org) and [Wayback Machine](https://web.archive.org/). You can use it as a command line tool or import the solution into your Go project. 
 
 ## Installation
 ### Source
@@ -17,15 +17,18 @@ docker run gogetcrawl --help
 ```
 
 ### Binary
-Check out the latest release if you need binary [here](https://github.com/karust/gogetcrawl/releases).
-
+Check out the latest release [here](https://github.com/karust/gogetcrawl/releases).
 
 ## Usage
 ### Docker
 ```
-	docker run uranusq/gogetcrawl url *.tutorialspoint.com/* --ext pdf
+docker run uranusq/gogetcrawl url *.tutorialspoint.com/* --ext pdf --limit 5
 ```
-### Cmd usage
+### Docker compose
+```
+docker-compose up --build
+```
+### CLI usage
 * See commands and flags:
 ```
 gogetcrawl -h
@@ -33,29 +36,29 @@ gogetcrawl -h
 
 #### Get URLs
 
-* You can fetch multiple domains archive data, the flags will be applied to each. By default you'll get all results displayed in your terminal:
+* You can get multiple-domain archive data, flags will be applied to each. By default, you will get all results displayed in your terminal (use `--collapse` to get unique results):
 ```
-gogetcrawl url *.example.com kamaloff.ru 
+gogetcrawl url *.example.com *.tutorialspoint.com/* --collapse
 ```
 
-* To limit number of results, output to file and select only Wayback as source you can:
+* To limit the number of results, enable output to a file and select only Wayback as a source you can:
 ```
-gogetcrawl url *.example.com kamaloff.ru --limit 10 --sources wb -o ./urls.txt
+gogetcrawl url *.tutorialspoint.com/* --limit 10 --sources wb -o ./urls.txt
 ```
 
 #### Download files
-* To download 10 `PDF` files to `./test` directory with 3 workers:
+* Download 5 `PDF` files to `./test` directory with 3 workers:
 ```
-gogetcrawl download *.cia.gov/* --limit 10 -w 3 -d ./test -f "mimetype:application/pdf"
+gogetcrawl download *.cia.gov/* --limit 5 -w 3 -d ./test -f "mimetype:application/pdf"
 ```
 
 ### Package usage
 ```
 go get github.com/karust/gogetcrawl
 ```
-*For both Wayback and Common crawl you can use `concurrent` and `non-concurrent` ways to interract with archives*
+For both Wayback and Common crawl you can use `concurrent` and `non-concurrent` ways to interract with archives: 
 #### Wayback
-* **Get urls:**
+* **Get urls**
 ```go
 package main
 
@@ -74,7 +77,7 @@ func main() {
 		Limit:   10,
 	}
 
-	// Set requests timout and retries
+	// Set request timout and retries
 	wb, _ := wayback.New(15, 2)
 
 	// Use config to obtain all CDX server responses
@@ -103,10 +106,10 @@ file, err := wb.GetFile(results[0])
 fmt.Println(string(file))
 ```
 
-#### Common Crawl
-*To use Common Crawl you just need to replace `wayback` module with `commoncrawl`. Let's use Common Crawl concurretly*
+#### CommonCrawl
+*To use CommonCrawl you just need to replace `wayback` module with `commoncrawl`. Let's use Common Crawl concurretly*
 
-* **Get urls:**
+* **Get urls**
 ```go
 cc, _ := commoncrawl.New(30, 3)
 

@@ -6,6 +6,7 @@ import (
 	"log"
 	"mime"
 	"os"
+	"strings"
 
 	"github.com/karust/gogetcrawl/common"
 	"github.com/karust/gogetcrawl/commoncrawl"
@@ -13,20 +14,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const version = "1.1.0"
+const version = "1.1.2"
 
 var (
-	filters          []string
-	isCollapse       bool
-	isDefaultFilters bool
-	isLogging        bool
-	isVerbose        bool
-	maxTimeout       int
-	maxRetries       int
-	maxResults       uint
-	maxWorkers       uint
-	extensions       []string
-	sourceNames      []string
+	filters      []string
+	isCollapse   bool
+	isSuccessful bool
+	isLogging    bool
+	isVerbose    bool
+	maxTimeout   int
+	maxRetries   int
+	maxResults   uint
+	maxWorkers   uint
+	extensions   []string
+	sourceNames  []string
 )
 
 var rootCmd = &cobra.Command{
@@ -72,16 +73,21 @@ func initSources() {
 func getRequestConfigs(args []string) chan common.RequestConfig {
 	confChan := make(chan common.RequestConfig, len(args))
 
-	if isDefaultFilters {
-		filters = append(filters, []string{"statuscode:200", "mimetype:text/html"}...)
+	if len(extensions) != 0 {
+		for _, ext := range extensions {
+			extRaw := mime.TypeByExtension("." + ext)
+			extMime := strings.Split(extRaw, ";")[0]
+
+			if extMime == "" {
+				log.Fatalln(fmt.Sprintf("No MIME type found for '%v', please use '--filter' with correlated MIME.", ext))
+			}
+
+			filters = append(filters, "mimetype:"+extMime)
+		}
 	}
 
-	for _, ext := range extensions {
-		mtype := mime.TypeByExtension("." + ext)
-		if mtype == "" {
-			log.Fatalln(fmt.Sprintf("No MIME type found for '%v', please use '--filter' with correlated MIME.", ext))
-		}
-		filters = append(filters, "mimetype:"+mtype)
+	if isSuccessful {
+		filters = append(filters, "statuscode:200")
 	}
 
 	for _, domain := range args {
@@ -89,6 +95,10 @@ func getRequestConfigs(args []string) chan common.RequestConfig {
 			URL:     domain,
 			Filters: filters,
 			Limit:   maxResults,
+		}
+
+		if isCollapse {
+			config.CollapseColumn = "urlkey"
 		}
 		confChan <- config
 	}
@@ -125,14 +135,14 @@ func initArgs() {
 func init() {
 	cobra.OnInitialize(initArgs)
 	rootCmd.PersistentFlags().StringSliceVarP(&filters, "filter", "f", []string{}, `Filters to use. You can use multiple. Example: --filter "mimetype:application/pdf"`)
-	//TODO rootCmd.PersistentFlags().BoolVarP(&isCollapse, "collapse", "c", false, `Get only unique URLs.`)
+	rootCmd.PersistentFlags().BoolVarP(&isCollapse, "collapse", "c", false, `Get only unique URLs.`)
+	rootCmd.PersistentFlags().BoolVarP(&isSuccessful, "successful", "", false, `Get only status 200 response items.`)
 	rootCmd.PersistentFlags().IntVarP(&maxTimeout, "timeout", "t", 30, `Max timeout of requests.`)
 	rootCmd.PersistentFlags().IntVarP(&maxRetries, "retries", "r", 3, `Max request retries."`)
 	rootCmd.PersistentFlags().UintVarP(&maxResults, "limit", "l", 0, `Max number of results to fetch."`)
 	rootCmd.PersistentFlags().UintVarP(&maxWorkers, "workers", "w", 4, `Max number of workers (threads) to use. URL consumes 1 worker"`)
 	rootCmd.PersistentFlags().StringSliceVarP(&extensions, "ext", "e", []string{}, `Which extensions to collect. Example: --ext "pdf,xml,jpeg"`)
 	rootCmd.PersistentFlags().StringSliceVarP(&sourceNames, "sources", "s", []string{"wb", "cc"}, `Web archive sources to use. Example: --sources "wb" to use only the Wayback`)
-	rootCmd.PersistentFlags().BoolVarP(&isDefaultFilters, "default-filter", "", false, `Use default filters (statuscode:200", "mimetype:text/html).`)
 	rootCmd.PersistentFlags().BoolVarP(&isVerbose, "verbose", "v", false, `Use verbose output.`)
 	rootCmd.PersistentFlags().BoolVarP(&isLogging, "log", "", false, `Print logs to ./logs.txt.`)
 }

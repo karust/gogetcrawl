@@ -69,6 +69,7 @@ func (cc *CommonCrawl) GetIndexes() ([]latestIndex, error) {
 }
 
 // Returns the number of pages located in CommonCrawl for given url
+//
 //	index: needs to be set manually here like "CC-MAIN-2023-14"
 func (cc *CommonCrawl) GetNumPagesIndex(url, index string) (int, error) {
 	requestURI := fmt.Sprintf("%v%v-index?url=%v&showNumPages=true", INDEX_SERVER, index, url)
@@ -101,7 +102,7 @@ func (cc *CommonCrawl) ParseResponse(resp []byte) ([]*common.CdxResponse, error)
 		return nil, fmt.Errorf("Empty response provided")
 	}
 
-	// Parse the response that contains JSON objects seperated with new line
+	// Parse the response that contains JSON objects separated with new line
 	for _, line := range bytes.Split(resp[:len(resp)-1], []byte{'\n'}) {
 		var indexVal common.CdxResponse
 		if err := jsoniter.Unmarshal(line, &indexVal); err != nil {
@@ -115,6 +116,7 @@ func (cc *CommonCrawl) ParseResponse(resp []byte) ([]*common.CdxResponse, error)
 }
 
 // GetPagesIndex ... Makes request to WebArchive index API to gather all url observations
+//
 //	index: needs to be set manually here like "CC-MAIN-2023-14"
 func (cc *CommonCrawl) GetPagesIndex(config common.RequestConfig, index string) ([]*common.CdxResponse, error) {
 	var pages int
@@ -134,7 +136,7 @@ func (cc *CommonCrawl) GetPagesIndex(config common.RequestConfig, index string) 
 
 	for page := 0; page < pages; page++ {
 		indexURL := fmt.Sprintf("%v%v-index", INDEX_SERVER, index)
-		reqURL := common.GetUrlFromConfig(indexURL, config, page)
+		reqURL := config.GetUrl(indexURL, page)
 
 		response, err := common.Get(reqURL, cc.MaxTimeout, cc.MaxRetries)
 		if err != nil {
@@ -157,6 +159,7 @@ func (cc *CommonCrawl) GetPagesIndex(config common.RequestConfig, index string) 
 }
 
 // Makes request to the Commoncrawl index API to gather all offsets that contain chosen URL.
+//
 //	Uses the latest CommonCrawl index.
 func (cc *CommonCrawl) GetPages(config common.RequestConfig) ([]*common.CdxResponse, error) {
 	return cc.GetPagesIndex(config, cc.indexes[0].Id)
@@ -164,6 +167,7 @@ func (cc *CommonCrawl) GetPages(config common.RequestConfig) ([]*common.CdxRespo
 
 // FetchPages is a concurrent way to GetPages.
 // Makes request to CommonCrawl index API and returns observations in a channel.
+//
 //	index: needs to be set manually here
 func (cc *CommonCrawl) FetchPages(config common.RequestConfig, results chan []*common.CdxResponse, errors chan error) {
 	var pages int
@@ -177,11 +181,12 @@ func (cc *CommonCrawl) FetchPages(config common.RequestConfig, results chan []*c
 			errors <- err
 		}
 	}
+
 	numResults := 0
 
 	for page := 0; page < pages; page++ {
 		indexURL := fmt.Sprintf("%v%v-index", INDEX_SERVER, cc.indexes[0].Id)
-		reqURL := common.GetUrlFromConfig(indexURL, config, page)
+		reqURL := config.GetUrl(indexURL, page)
 
 		response, err := common.Get(reqURL, cc.MaxTimeout, cc.MaxRetries)
 		if err != nil {
@@ -202,8 +207,9 @@ func (cc *CommonCrawl) FetchPages(config common.RequestConfig, results chan []*c
 }
 
 // Gets files from CommonCrawl storage using info from CdxResponse server
-//   page: info about found web page in CdxResponse
-//   timeout: timeout in seconds
+//
+//	page: info about found web page in CdxResponse
+//	timeout: timeout in seconds
 func (cc *CommonCrawl) GetFile(page *common.CdxResponse) ([]byte, error) {
 	offset, _ := strconv.Atoi(page.Offset)
 	length, _ := strconv.Atoi(page.Length)

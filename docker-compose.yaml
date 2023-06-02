@@ -1,9 +1,16 @@
-version: '1'
+version: '2'
 
 services:
   crawler1:
-      container_name: worker1
+      container_name: crawler1
       image: uranusq/gogetcrawl
-      command: file *.cia.gov/* --limit 1 --ext pdf --dir /app -v
+      command: file *.cia.gov/* --ext jpeg --dir /app -c -v -s wb
       volumes:
-        - ./test:/app
+        - ./test/crawler1:/app
+
+  crawler2:
+    container_name: crawler2
+    image: uranusq/gogetcrawl
+    command: file *.tutorialspoint.com/* --ext html --dir /app -c -v -s wb
+    volumes:
+      - ./test/crawler2:/app
