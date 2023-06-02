@@ -95,7 +95,7 @@ func (wb *Wayback) GetPages(config common.RequestConfig) ([]*common.CdxResponse,
 	numResults := 0
 
 	for page := 0; page < pages; page++ {
-		reqURL := common.GetUrlFromConfig(INDEX_SERVER, config, page)
+		reqURL := config.GetUrl(INDEX_SERVER, page)
 
 		response, err := common.Get(reqURL, wb.MaxTimeout, wb.MaxRetries)
 		if err != nil {
@@ -135,7 +135,7 @@ func (wb *Wayback) FetchPages(config common.RequestConfig, results chan []*commo
 	numResults := 0
 
 	for page := 0; page < pages; page++ {
-		reqURL := common.GetUrlFromConfig(INDEX_SERVER, config, page)
+		reqURL := config.GetUrl(INDEX_SERVER, page)
 
 		response, err := common.Get(reqURL, wb.MaxTimeout, wb.MaxRetries)
 		if err != nil {
@@ -157,9 +157,9 @@ func (wb *Wayback) FetchPages(config common.RequestConfig, results chan []*commo
 }
 
 // Download file from WebArchive using a link from CDX response
-func (as *Wayback) GetFile(page *common.CdxResponse) ([]byte, error) {
+func (wb *Wayback) GetFile(page *common.CdxResponse) ([]byte, error) {
 	requestURI := fmt.Sprintf("%v/%vid_/%v", CRAWL_STORAGE, page.Timestamp, page.Original)
-	response, err := common.Get(requestURI, as.MaxTimeout, as.MaxRetries)
+	response, err := common.Get(requestURI, wb.MaxTimeout, wb.MaxRetries)
 	if err != nil {
 		return nil, fmt.Errorf("[GetFile] Request error: %v", err)
 	}

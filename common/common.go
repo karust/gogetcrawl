@@ -19,7 +19,7 @@ import (
 var Status503Error = errors.New("Server returned 503 status response")
 var Status500Error = errors.New("Server returned 500 status response. (Slow down)")
 
-//  WebArchive and Common Crawl (index.commoncrawl.org) CDX API Response structure from
+// WebArchive and Common Crawl (index.commoncrawl.org) CDX API Response structure from
 type CdxResponse struct {
 	Urlkey       string `json:"urlkey,omitempty"`
 	Timestamp    string `json:"timestamp,omitempty"`
@@ -47,23 +47,23 @@ type Source interface {
 }
 
 type RequestConfig struct {
-	URL        string   // Url to parse
-	Filters    []string // Extenstion to search
-	Limit      uint     // Max number of results per page
-	Collapse   string   // Which column to use to collapse results
-	SinglePage bool     // Get results only from 1st page (mostly used for tests)
+	URL            string   // Url to parse
+	Filters        []string // Extenstion to search
+	Limit          uint     // Max number of results per page
+	CollapseColumn string   // Which column to use to collapse results
+	SinglePage     bool     // Get results only from 1st page (mostly used for tests)
 }
 
 // GetUrlFromConfig ... Compose URL with CDX server request parameters
-func GetUrlFromConfig(serverURL string, config RequestConfig, page int) string {
+func (config RequestConfig) GetUrl(serverURL string, page int) string {
 	reqURL := fmt.Sprintf("%v?url=%v&output=json", serverURL, config.URL)
 
 	if config.Limit != 0 {
 		reqURL = fmt.Sprintf("%v&limit=%v", reqURL, config.Limit)
 	}
 
-	if config.Collapse != "" {
-		reqURL = fmt.Sprintf("%v&collapse=%v", reqURL, config.Collapse)
+	if config.CollapseColumn != "" {
+		reqURL = fmt.Sprintf("%v&collapse=%v", reqURL, config.CollapseColumn)
 	}
 
 	for _, filter := range config.Filters {
