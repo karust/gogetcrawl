@@ -7,6 +7,7 @@ import (
 	"mime"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/karust/gogetcrawl/common"
 	"github.com/karust/gogetcrawl/commoncrawl"
@@ -17,17 +18,19 @@ import (
 const version = "1.1.2"
 
 var (
-	filters      []string
-	isCollapse   bool
-	isSuccessful bool
-	isLogging    bool
-	isVerbose    bool
-	maxTimeout   int
-	maxRetries   int
-	maxResults   uint
-	maxWorkers   uint
-	extensions   []string
-	sourceNames  []string
+	filters        []string
+	fromDateFilter string
+	toDateFilter   string
+	isCollapse     bool
+	isSuccessful   bool
+	isLogging      bool
+	isVerbose      bool
+	maxTimeout     int
+	maxRetries     int
+	maxResults     uint
+	maxWorkers     uint
+	extensions     []string
+	sourceNames    []string
 )
 
 var rootCmd = &cobra.Command{
@@ -90,11 +93,25 @@ func getRequestConfigs(args []string) chan common.RequestConfig {
 		filters = append(filters, "statuscode:200")
 	}
 
+	if fromDateFilter != "" {
+		if _, err := time.Parse("20060102", fromDateFilter); err != nil {
+			log.Fatalln(fmt.Sprintf("Please check `--from` filter date: '%v', %v", fromDateFilter, err))
+		}
+	}
+
+	if toDateFilter != "" {
+		if _, err := time.Parse("20060102", toDateFilter); err != nil {
+			log.Fatalln(fmt.Sprintf("Please check `--to` filter date: '%v', %v", toDateFilter, err))
+		}
+	}
+
 	for _, domain := range args {
 		config := common.RequestConfig{
-			URL:     domain,
-			Filters: filters,
-			Limit:   maxResults,
+			URL:      domain,
+			Filters:  filters,
+			Limit:    maxResults,
+			FromDate: fromDateFilter,
+			ToDate:   toDateFilter,
 		}
 
 		if isCollapse {
@@ -145,4 +162,7 @@ func init() {
 	rootCmd.PersistentFlags().StringSliceVarP(&sourceNames, "sources", "s", []string{"wb", "cc"}, `Web archive sources to use. Example: --sources "wb" to use only the Wayback`)
 	rootCmd.PersistentFlags().BoolVarP(&isVerbose, "verbose", "v", false, `Use verbose output.`)
 	rootCmd.PersistentFlags().BoolVarP(&isLogging, "log", "", false, `Print logs to ./logs.txt.`)
+	rootCmd.PersistentFlags().StringVarP(&fromDateFilter, "from", "", "", "Filter from date, example: --from 20200131 (filter from 31 Jan 2020)")
+	rootCmd.PersistentFlags().StringVarP(&toDateFilter, "to", "", "", "Filter to date, example: --to 20230401 (filter to 1 Apr 2023)")
+	//TODOrootCmd.PersistentFlags().BoolVarP(&isDisablePagination, "disable-pagination", "", "", "")
 }

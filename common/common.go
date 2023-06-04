@@ -52,6 +52,8 @@ type RequestConfig struct {
 	Limit          uint     // Max number of results per page
 	CollapseColumn string   // Which column to use to collapse results
 	SinglePage     bool     // Get results only from 1st page (mostly used for tests)
+	FromDate       string   // Filter results from Date
+	ToDate         string   // Filter results to Date
 }
 
 // GetUrlFromConfig ... Compose URL with CDX server request parameters
@@ -72,10 +74,17 @@ func (config RequestConfig) GetUrl(serverURL string, page int) string {
 		}
 	}
 
+	if config.FromDate != "" {
+		reqURL = fmt.Sprintf("%v&from=%v", reqURL, config.FromDate)
+	}
+
+	if config.ToDate != "" {
+		reqURL = fmt.Sprintf("%v&to=%v", reqURL, config.ToDate)
+	}
+
 	if !config.SinglePage {
 		reqURL = fmt.Sprintf("%v&page=%v", reqURL, page)
 	}
-
 	return reqURL
 }
 

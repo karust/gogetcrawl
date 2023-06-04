@@ -36,18 +36,22 @@ gogetcrawl -h
 
 #### Get URLs
 
-* You can get multiple-domain archive data, flags will be applied to each. By default, you will get all results displayed in your terminal (use `--collapse` to get unique results):
+* You can get multiple-domain archive data, flags will be applied to each. By default, you will get all results displayed in your terminal (use `--collapse` to get **unique** results):
 ```
 gogetcrawl url *.example.com *.tutorialspoint.com/* --collapse
 ```
 
-* To limit the number of results, enable output to a file and select only Wayback as a source you can:
+* To **limit** the number of results, enable output to a file and select only Wayback as a **source** you can:
 ```
 gogetcrawl url *.tutorialspoint.com/* --limit 10 --sources wb -o ./urls.txt
 ```
 
+* Set **date range**:
+```
+gogetcrawl url *.tutorialspoint.com/* --limit 10 --from 20140131 --to 20231231
+```
 #### Download files
-* Download 5 `PDF` files to `./test` directory with 3 workers:
+* Download 5 `PDF` files to `./test` directory with 3 **workers**:
 ```
 gogetcrawl download *.cia.gov/* --limit 5 -w 3 -d ./test -f "mimetype:application/pdf"
 ```
