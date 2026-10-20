@@ -1,6 +1,6 @@
 module github.com/karust/gogetcrawl
 
-go 1.20
+go 1.24
 
 require (
 	github.com/corpix/uarand v0.2.0
@@ -13,7 +13,7 @@ require (
 require (
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/klauspost/compress v1.16.5 // indirect
+	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
